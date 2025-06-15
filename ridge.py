@@ -4,6 +4,7 @@ import numpy as np
 import util
 import matplotlib.pyplot as plt
 import pickle
+from array import array
 
 # -----
 KEEP_N_ITERS = 9066 # slice width - set smaller to save RAM/time
@@ -22,7 +23,7 @@ class Ridge():
 
     # Input: Rating matrix A
     # Hyperparameters: Vector Space Dimension: f ; alpha ; lambd
-    def fit(self, A, max_iter=30):
+    def fit(self, A, max_iter=3):
         """
         Memory-safe Alternating Least Squares for implicit feedback.
         Works in < 200 MB for the full 671 × 9 066 matrix.
@@ -53,7 +54,7 @@ class Ridge():
                 self.Y[:, m] = np.linalg.solve(A_m, b_m)
       
     # K is the number of recommended movies   
-    def predict(self, u, K = 9125):
+    def predict(self, u, K = 5):
     #def predict(self, u, K = 100): 
         P_u_hat = np.dot(self.X[u] , self.Y)
         indices = np.argsort(P_u_hat)
@@ -73,19 +74,45 @@ class Ridge():
         return recommended_movies
             
 def rank(mat1, r):
+    '''
+    Evaluates the quality of recommendations.
+    
+    Input: 
+        mat1: validation matrix
+        r: ridge model instance
+
+    Steps:
+        - Computes a percentile ranking for recommendations based on their position in the sorted list
+        - Aggregates rankings across all users to calculate an overall score
+    '''
+
     k = len(mat1) #number of users
     n = len(mat1[0]) #number of movies
     sum_numerator = 0
-    sum_denominator = np.sum(mat1)
+    sum_denominator = np.sum(mat1) # sum of all movie ratings
+
+    # iterate through users
     for u in range(k):
+
+        # generate recommendations for user u
         recommendations = r.predict(u)
         K = len(recommendations)
+
         rank_u = np.zeros(n)
+
+        # iterate through movies
         for m in range(n):
+
+            # if this movie was a recommendation
             if m in recommendations :
+
+                # update rank for this movie to store index in recommendadtions 
+                # normalize to length of recommendations - 1
                 rank_u[m] = recommendations.index(m)/(K-1)
         
+        # iterate through movies
         for m in range(n): 
+            # add to numerator each rating*rank from user u for movie m
             sum_numerator += mat1[u,m]*rank_u[m]
     
     return(sum_numerator / sum_denominator)
@@ -93,40 +120,57 @@ def rank(mat1, r):
 if __name__ == "__main__":
     
     '''Basic test of the algorithm'''
-    A = util.load_data_matrix()
-    # A = util.load_data_matrix()[:,:100] # if tested on a laptop, please use the first 100 movies 
-    print(A, A.shape)
+
+    # Load the user-movie matrix
+
+    # A = util.load_data_matrix()
+    A = util.load_data_matrix()[:,:100] # if tested on a laptop, please use the first 100 movies 
+
+    # Train the model using Ridge object
     r = Ridge()
     r.fit(A)
+
+    # Generate movie recommendations for user with ID 1 (movie IDs)
     recommendations = r.predict(1) # predicts the top K movies for user 1
-    print(recommendations)
+
+    # Open dictionary that maps movieIDs to movie titles
     B = pickle.load( open('{}'.format('data/data_dicts.p'), 'rb'))
-    
-    for movie_id,rating in B['userId_rating'][2]:
-        if rating ==5 :
-            print(B['movieId_movieName'][movie_id] , ", rating:" , rating )
+
+    # Uncomment if you want to print all movies for which this user gave 5.0 rating
+    # for movie_id,rating in B['userId_rating'][2]:
+    #     if rating ==5 :
+    #         print(B['movieId_movieName'][movie_id] , ", rating:" , rating )
         
-    l = recommendations
-    k_list =[]
+    l = recommendations # movie columns in matrix
+    k_list =[] # movieId values
+
+    # iterate through movie columns
     for movie_column in l :
+
+        # iterate through movieId_movieCol dictionary
         for k, v in B['movieId_movieCol'].items():
+
+            # if movie column in recommendations matches the col value in the dictionary
             if v == movie_column:
+                # add this movieId to k_list
                 k_list.append(k)
-    print("")
+
     print("Recommendations")
     for movie_id in k_list :
         print(B['movieId_movieName'][movie_id])
     
+
+    # Hyperparameter tuning
     '''Choice of hyperparameters'''
-    A = util.load_data_matrix()
-    # A = util.load_data_matrix()[:,:100] # if tested on a laptop, please use the first 100 movies 
-    f_range = np.arange(100,400,20)
+    # A = util.load_data_matrix()
+    A = util.load_data_matrix()[:,:100] # if tested on a laptop, please use the first 100 movies 
+    f_range = np.arange(10,40,10)
     ranks_f = []
-    alpha_range = np.arange(10, 80, 10)
+    alpha_range = np.arange(10) # np.arange(10, 80, 10)
     ranks_alpha = []
-    lambd_range = np.logspace(-1, 1, 10)
+    lambd_range = np.logspace(-1, 1, 2)
     ranks_lambd = []
-    thres_range = np.arange(0, 3.5, 0.5)
+    thres_range = np.arange(0, 3.5, 1.0)
     ranks_thres = []
 
     k = 4
@@ -134,7 +178,7 @@ if __name__ == "__main__":
 
     '''Choice of f'''
     for f in f_range :
-        print(f)
+        print("f: ", f)
         x=[]
         for i in range(k):
             train_mat = train_mats[i]
@@ -148,11 +192,12 @@ if __name__ == "__main__":
     plt.plot(f_range,ranks_f)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('f')
-    plt.show()
+    #plt.show()
+    plt.savefig('hyperparameter_f.pdf')
 
     '''Choice of alpha'''
     for alpha in alpha_range :
-        print(alpha)
+        print("alpha: ", alpha)
         x=[]
         for i in range(k):
             train_mat = train_mats[i]
@@ -166,11 +211,12 @@ if __name__ == "__main__":
     plt.plot(alpha_range,ranks_alpha)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('alpha')
-    plt.show()
+    #plt.show()
+    plt.savefig('hyperparameter_alpha.pdf')
     
     '''Choice of lambda'''
     for lambd in lambd_range :
-        print(lambd)
+        print("lambda: ", lambd)
         x=[]
         for i in range(k):
             train_mat = train_mats[i]
@@ -184,11 +230,12 @@ if __name__ == "__main__":
     plt.semilogx(lambd_range,ranks_lambd)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('lambda')
-    plt.show()
+    #plt.show()
+    plt.savefig('hyperparameter_lambda.pdf')
 
     '''Choice of threshold'''
     for thres in thres_range :
-        print(thres)
+        print("thres: ", thres)
         x=[]
         for i in range(k):
             train_mat = train_mats[i]
@@ -202,4 +249,5 @@ if __name__ == "__main__":
     plt.plot(thres_range,ranks_thres)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('threshold')
-    plt.show()
+    #plt.show()
+    plt.savefig('hyperparameter_threshold.pdf')
