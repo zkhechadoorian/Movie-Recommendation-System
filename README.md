@@ -1,5 +1,9 @@
 # 🎬 Movie Recommendation System: Predicting User Preferences
 
+This project was developed as part of the 2025vCompuFlair Data Science bootcamp.
+
+----
+
 This project addresses the problem of accurately predicting user movie preferences in the context of sparse rating data, a common challenge in recommendation systems. The team implemented and compared four collaborative filtering approaches using the MovieLens dataset: Neighborhood-Based Collaborative Filtering, Ridge Regression, Neural Networks, and Support Vector Machines. Each method was tailored to handle data sparsity and assessed based on prediction quality, computational efficiency, and system applicability. The models were evaluated using metrics like mean squared error, expected percentile ranking, and classification accuracy to determine their effectiveness in recommending movies.
 
 # 📁 Project Structure
@@ -73,7 +77,7 @@ This dataset describes 5-star rating and free-text tagging activity from [MovieL
 Run the following command in your local terminal to download the project:
 
 ```bash
-
+git clone https://github.com/zkhechadoorian/Movie-Recommendation-System
 ```
 ### Step 2: Setup Virtual Environment
 
@@ -100,10 +104,9 @@ pip install -r requirements.txt
 
 **Purpose:**
 
-* Preprocess raw MovieLens data and build user-item rating matrices.
+* Preprocess raw MovieLens data and build user-item rating matrices. This file combines information from `movies.csv` and `ratings.csv` to create a matrix where row i corresponds to the user with userId i and column j corresponds to the movie with movieId j. Cells (i,j) store the rating from user i for movie j. Cells that store 0 indicate that no rating exists for the given user-movie combination.
 
-
-Use Jupyter to manually execute cells.
+Use Jupyter to manually execute cells by clicking `Run All`, or running cells one at a time.
 
 ---
 
@@ -111,7 +114,7 @@ Use Jupyter to manually execute cells.
 
 **Purpose:**
 
-* Implements Neighborhood-based Collaborative Filtering using similarity metrics (e.g., cosine, Pearson).
+* Implements Neighborhood-based Collaborative Filtering using similarity metrics (e.g., cosine, Pearson). Collaborative Filtering is a technique that uses similarities between users and ratings to suggest new films to a given user. 
 
 **How to Run:**
 
@@ -119,7 +122,11 @@ Use Jupyter to manually execute cells.
 python cf.py
 ```
 
-Adjust internal parameters as needed (e.g., similarity type, top-K neighbors).
+**How it Works:**
+
+The `cf.py` script takes as input the data matrix created by `create_data_matrix.ipynb`, where rows represent users, columns represent movies, and cells hold numerical values to indicate user ratings for a given film. Missing ratings,  indicated by 0, are replaced with predicted values based on similarities between other users and films. After matrix completion, the script identifies top-rated films for a specific user and prints the first five titles as their personalized movie recommendations. 
+
+Internal parameters can be adjusted as needed (e.g., similarity type, top-K neighbors).
 
 ---
 
