@@ -55,7 +55,7 @@ class Ridge():
       
     # K is the number of recommended movies   
     def predict(self, u, K = 5):
-    #def predict(self, u, K = 100): 
+
         P_u_hat = np.dot(self.X[u] , self.Y)
         indices = np.argsort(P_u_hat)
         
@@ -75,7 +75,7 @@ class Ridge():
             
 def rank(mat1, r):
     '''
-    Evaluates the quality of recommendations.
+    Evaluates the quality of recommendations. Calculates expected percentile rank for recommendation.
     
     Input: 
         mat1: validation matrix
