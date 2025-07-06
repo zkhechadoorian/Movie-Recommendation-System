@@ -1,7 +1,7 @@
 import pickle
 import numpy as np
 import util
-
+import matplotlib.pyplot as plt
 
 class CollaborativeFiltering:
     """
@@ -109,11 +109,38 @@ if __name__ == "__main__":
     cf = CollaborativeFiltering(k=50, s=10)
     A_pred = cf.fit(A, verbose=True)
 
-    rec_cols = np.argsort(A_pred[1])[:5]
+    # Get the indices of the top 5 movies with the highest predicted ratings for user-1
+    rec_cols = np.argsort(A_pred[1])[-5:][::-1]  # Sort in descending order
 
+    # retrieve pickle file to reference dictionary of film titles
     B = pickle.load(open('data/data_dicts.p', 'rb'))
+
     print("\nRecommendations for user-1:")
     for col in rec_cols:
         for movieId, movieCol in B['movieId_movieCol'].items():
             if movieCol == col:
-                print(B['movieId_movieName'][movieId])
+                pred_title = B['movieId_movieName'][movieId]
+                pred_rating = A_pred[1][movieCol]
+                print(f"{pred_title:80} Predicted Rating: {pred_rating:3}")
+    
+# Draw a distribution of the predicted ratings
+A_pred_list = A_pred.reshape(-1).tolist()
+plt.figure(figsize=(8, 6))
+plt.hist(A_pred_list, bins=np.arange(0, 6, 1), edgecolor='black')
+plt.title('Distribution of Ratings Predicted by CF')
+plt.xlabel('Rating')
+plt.ylabel('Frequency')
+plt.xticks(np.arange(0.0, 6.0, 1.0))
+plt.grid(axis='y')
+plt.savefig('predictions_cf.pdf')
+
+# Draw a distribution of the predicted ratings for user one only
+A_pred_list_user1 = A_pred[1].reshape(-1).tolist()
+plt.figure(figsize=(8, 6))
+plt.hist(A_pred_list, bins=np.arange(0, 6, 1), edgecolor='black')
+plt.title('Distribution of User-1 Ratings Predicted by CF')
+plt.xlabel('Rating')
+plt.ylabel('Frequency')
+plt.xticks(np.arange(0.0, 6.0, 1.0))
+plt.grid(axis='y')
+plt.savefig('predictions_user1_cf.pdf')
