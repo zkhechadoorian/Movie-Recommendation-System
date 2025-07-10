@@ -13,12 +13,12 @@ MAX_ITERS = 2       # None -> unlimited convergence loop
 
 class Ridge():
     """Weighted Ridge Regression"""
-    def __init__(self, f=200, alpha=20, lambd=0.1, thres=0, epsilon=0.1):
-        self.f = f
-        self.alpha = alpha
-        self.lambd = lambd
-        self.thres = thres          # ← save it!
-        self.epsilon = epsilon
+    def __init__(self, f=250, alpha=200, lambd=0.01, thres=0, epsilon=0.1):
+        self.f = f         # latent feature space dimension
+        self.alpha = alpha # confidence scaling factor
+        self.lambd = lambd # regularization parameter
+        self.thres = thres # ← save it!
+        self.epsilon = epsilon # convergence tolerance for ALS
 
 
     # Input: Rating matrix A
@@ -53,11 +53,14 @@ class Ridge():
                 b_m = (self.X.T * cm) @ P[:, m]
                 self.Y[:, m] = np.linalg.solve(A_m, b_m)
       
+        #print(f"Range of X: Min = {self.X.min()}, Max = {self.X.max()}")
+        #print(f"Range of Y: Min = {self.Y.min()}, Max = {self.Y.max()}")
+
     # K is the number of recommended movies   
     def predict(self, u, K = 5):
 
         P_u_hat = np.dot(self.X[u] , self.Y)
-        indices = np.argsort(P_u_hat)
+        indices = np.argsort(P_u_hat)[::-1] 
         
 #        Recommended movies that have not been rated yet
 #        k=0
@@ -125,24 +128,40 @@ if __name__ == "__main__":
 
     # A = util.load_data_matrix()
     A = util.load_data_matrix()[:,:100] # if tested on a laptop, please use the first 100 movies 
+    #print(f"Min value in A: {A.min()}, Max value in A: {A.max()}")
+
+    # compute average of nonzero elements in A
+    nonzero_elements = A[A != 0]
+    average_nonzero = np.mean(nonzero_elements)
+    #print(f"Average of nonzero elements in A: {average_nonzero}")
 
     # Train the model using Ridge object
-    r = Ridge()
+    r = Ridge(thres=2.0,lambd=0.1)
     r.fit(A)
 
-    # Generate movie recommendations for user with ID 1 (movie IDs)
-    recommendations = r.predict(1) # predicts the top K movies for user 1
+    # generate predicted ratings for all users
+    predicted_ratings = np.clip( (r.X @ r.Y) * 5 , 0, 5) # scale ratings from 0-1 to 0-5
+    #print(f"Min predicted rating: {predicted_ratings.min()}")
+    #print(f"Max predicted rating: {predicted_ratings.max()}")
+
+    # Plot the distribution of predicted ratings
+    plt.figure(figsize=(8, 6))
+    plt.hist(predicted_ratings.reshape(-1).tolist(), bins=np.arange(0, 6, 1.0), edgecolor='black')
+    plt.title('Distribution of Predicted Ratings (Ridge Algorithm)')
+    plt.xlabel('Predicted Rating')
+    plt.ylabel('Frequency')
+    plt.grid(axis='y')
+    plt.savefig('predictions_ridge.png')
+
+    # Generate movie recommendations for user with ID 1 (list of movie IDs)
+    userId = 1
+    recommendations = r.predict(userId) # predicts the top K movies for user with userId
 
     # Open dictionary that maps movieIDs to movie titles
     B = pickle.load( open('{}'.format('data/data_dicts.p'), 'rb'))
-
-    # Uncomment if you want to print all movies for which this user gave 5.0 rating
-    # for movie_id,rating in B['userId_rating'][2]:
-    #     if rating ==5 :
-    #         print(B['movieId_movieName'][movie_id] , ", rating:" , rating )
         
-    l = recommendations # movie columns in matrix
-    k_list =[] # movieId values
+    l = recommendations # list of recommended movie columns in matrix
+    k_list =[] # list of recommended movieId values
 
     # iterate through movie columns
     for movie_column in l :
@@ -156,21 +175,36 @@ if __name__ == "__main__":
                 k_list.append(k)
 
     print("Recommendations")
-    for movie_id in k_list :
-        print(B['movieId_movieName'][movie_id])
-    
+    for rec_movie_column in l:  # Iterate through recommended movie columns
+        for movie_id, movie_col in B['movieId_movieCol'].items():
+            if movie_col == rec_movie_column:
+                pred_title = B['movieId_movieName'][movie_id]
+                # Predicted rating for the movie (scaled from 0-1 to 0-5)
+                pred_rating = np.clip( 5 * r.X[userId] @ r.Y[:, rec_movie_column], 0, 5 )
+                # Predicted rating for the movie
+                print(f"{pred_title:80} Predicted Rating: {pred_rating:.2f}")
+
+    run_scans = False
+    if (not run_scans):
+        print("Ridge complete. Script is configured to skip hyperparameter turning. "
+        "To turn this feature back on, set 'run_scans = True.' ")
+        exit(0)
+
+    '''
+    The rest of the code is focused on hyperparameter tuning. 
+    More specifically, it performs a scan over f, lambda, and threshold.'''
 
     # Hyperparameter tuning
     '''Choice of hyperparameters'''
     # A = util.load_data_matrix()
     A = util.load_data_matrix()[:,:100] # if tested on a laptop, please use the first 100 movies 
-    f_range = np.arange(10,40,10)
+    f_range = np.arange(200,400,50)
     ranks_f = []
-    alpha_range = np.arange(10) # np.arange(10, 80, 10)
+    alpha_range = np.arange(100, 300, 50)
     ranks_alpha = []
     lambd_range = np.logspace(-1, 1, 2)
     ranks_lambd = []
-    thres_range = np.arange(0, 3.5, 1.0)
+    thres_range = np.arange(0, 3.5, 0.5)
     ranks_thres = []
 
     k = 4
@@ -188,12 +222,13 @@ if __name__ == "__main__":
             x.append(rank(val_mat, r))
             
         ranks_f.append(np.mean(x)*100)
-        
+    
+    plt.figure()
     plt.plot(f_range,ranks_f)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('f')
-    #plt.show()
-    plt.savefig('hyperparameter_f.pdf')
+    plt.show()
+    plt.savefig('hyperparameter_f.png')
 
     '''Choice of alpha'''
     for alpha in alpha_range :
@@ -207,12 +242,13 @@ if __name__ == "__main__":
             x.append(rank(val_mat, r))
             
         ranks_alpha.append(np.mean(x)*100)
-        
+
+    plt.figure()  
     plt.plot(alpha_range,ranks_alpha)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('alpha')
-    #plt.show()
-    plt.savefig('hyperparameter_alpha.pdf')
+    plt.show()
+    plt.savefig('hyperparameter_alpha.png')
     
     '''Choice of lambda'''
     for lambd in lambd_range :
@@ -226,12 +262,13 @@ if __name__ == "__main__":
             x.append(rank(val_mat, r))
             
         ranks_lambd.append(np.mean(x)*100)
-        
+
+    plt.figure()  
     plt.semilogx(lambd_range,ranks_lambd)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('lambda')
-    #plt.show()
-    plt.savefig('hyperparameter_lambda.pdf')
+    plt.show()
+    plt.savefig('hyperparameter_lambda.png')
 
     '''Choice of threshold'''
     for thres in thres_range :
@@ -245,9 +282,10 @@ if __name__ == "__main__":
             x.append(rank(val_mat, r))
             
         ranks_thres.append(np.mean(x)*100)
-        
+
+    plt.figure()  
     plt.plot(thres_range,ranks_thres)
     plt.ylabel('expected percentile ranking (%)')
     plt.xlabel('threshold')
-    #plt.show()
-    plt.savefig('hyperparameter_threshold.pdf')
+    plt.show()
+    plt.savefig('hyperparameter_threshold.png')
