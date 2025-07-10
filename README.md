@@ -1,10 +1,17 @@
 # 🎬 Movie Recommendation System: Predicting User Preferences
 
-This project was developed as part of the 2025vCompuFlair Data Science bootcamp.
+This project was developed as part of the 2025 CompuFlair Data Science bootcamp.
 
 ----
 
-This project addresses the problem of accurately predicting user movie preferences in the context of sparse rating data, a common challenge in recommendation systems. The team implemented and compared four collaborative filtering approaches using the MovieLens dataset: Neighborhood-Based Collaborative Filtering, Ridge Regression, Neural Networks, and Support Vector Machines. Each method was tailored to handle data sparsity and assessed based on prediction quality, computational efficiency, and system applicability. The models were evaluated using metrics like mean squared error, expected percentile ranking, and classification accuracy to determine their effectiveness in recommending movies.
+This project addresses the problem of accurately predicting user movie preferences in the context of sparse rating data, a common challenge in recommendation systems. The project implements and compares four collaborative filtering approaches using the MovieLens dataset: 
+
+- Neighborhood-Based Collaborative Filtering (CF)
+- Ridge Regression
+- Neural Networks
+- Support Vector Machines (SVM)
+
+Each method was tailored to handle data sparsity and assessed based on prediction quality, computational efficiency, and system applicability. The models were evaluated using metrics like mean squared error, expected percentile ranking, and classification accuracy to determine their effectiveness in recommending movies.
 
 # 📁 Project Structure
 
@@ -124,9 +131,21 @@ python cf.py
 
 **How it Works:**
 
-The `cf.py` script takes as input the data matrix created by `create_data_matrix.ipynb`, where rows represent users, columns represent movies, and cells hold numerical values to indicate user ratings for a given film. Missing ratings,  indicated by 0, are replaced with predicted values based on similarities between other users and films. After matrix completion, the script identifies top-rated films for a specific user and prints the first five titles as their personalized movie recommendations. 
+The `cf.py` script takes as input the data matrix created by `create_data_matrix.ipynb`, where rows represent users, columns represent movies, and cells hold numerical values to indicate user ratings for a given film. Missing ratings,  indicated by 0, are replaced with predicted values based on similarities between other users and films. After matrix completion, the script identifies top-rated films for a specific user (user-1) and prints the first five titles as their personalized movie recommendations. Each title is accompanied by its predicted rating. The output for user-1 is:
 
-Internal parameters can be adjusted as needed (e.g., similarity type, top-K neighbors).
+```bash
+Green Mile, The (1999)                                                           Predicted Rating: 5.0
+Shrek (2001)                                                                     Predicted Rating: 5.0
+Léon: The Professional (a.k.a. The Professional) (Léon) (1994)                   Predicted Rating: 5.0
+Independence Day (a.k.a. ID4) (1996)                                             Predicted Rating: 5.0
+Fifth Element, The (1997)                                                        Predicted Rating: 5.0
+```
+
+Movie titles are printed in the same order in which they appear in the user-movie data matrix. 
+
+Internal parameters for the CF technique can be adjusted as needed (e.g., similarity type, top-K neighbors). The CF algorithm only predicts ratings as multiples of 0.5, similar to the allowed user ratings. The distribution of predicted ratings is shown below.
+
+![](./predictions_cf.png)
 
 ---
 
@@ -134,7 +153,7 @@ Internal parameters can be adjusted as needed (e.g., similarity type, top-K neig
 
 **Purpose:**
 
-* Applies Ridge Regression to estimate user ratings using a linear model and regularization.
+* Applies Ridge Regression to estimate user ratings using a linear model and regularization. The algorithm employes Alternating Least Squares (ALS) factorization, which decomposes the sparse user-movie rating matrix into separate user and movie matrices whose shapes are determined by a tunable number of latent features. The multiplication of these two matrices results in a user-movie matrix that stores predicted values. Unlike the previous algorithm, CF, the ALS factorization enables a continuous range of predictions rather than predictions that are strictly mutiples of 0.5. 
 
 **How to Run:**
 
@@ -143,6 +162,18 @@ python ridge.py
 ```
 
 You may need to install `scikit-learn` if not already available.
+
+```bash
+Sense and Sensibility (1995)                                                     Predicted Rating: 5.00
+Clueless (1995)                                                                  Predicted Rating: 5.00
+GoldenEye (1995)                                                                 Predicted Rating: 4.99
+Seven (a.k.a. Se7en) (1995)                                                      Predicted Rating: 4.99
+Usual Suspects, The (1995)                                                       Predicted Rating: 4.99
+```
+
+The distribution of ratings predicted by the Ridge algorithm is shown below. Noticeably, the distribution is bimodal with ratings that are either very close to 0 or very close to 5.0. This is a result of applying some threshold ratings below which existing user-movie ratings are discarded prior to ALS factorization. As such, the Ridge model focuses on predicting movie preferences, rather than realistic ratings for all movies.  
+
+![](./predictions_ridge.png)
 
 ---
 
@@ -162,6 +193,7 @@ You may need to install `scikit-learn` if not already available.
 **Purpose:**
 
 * Trains the neural network using user-item matrix data.
+* Implements Collaborative Filtering Neural Network (CFNN) for movie recommendations.
 * Utilizes the model defined in `nn.py`.
 
 **How to Run:**
@@ -183,6 +215,9 @@ pip install torch torchvision
 **Purpose:**
 
 * Uses Support Vector Machines to predict ratings.
+* Ratings are classified into one of three categories: ratings above threshold (hard-coded as 3.5), ratings below threshold, and missing ratings. 
+* The SVM model is trained to predict ratings in each movie column of the user-item matrix using other columns as features.
+* Predictions are iteratively refined until convergence.
 
 **How to Run:**
 
@@ -207,6 +242,39 @@ pip install scikit-learn
 **No command needed.** Used as a helper module by other scripts.
 
 ---
+Comparison of Results
+---
+
+```
+CF Recommendations:
+    Clerks (1994)
+    Shallow Grave (1994)
+    Highlander III: The Sorcerer (a.k.a. Highlander: The Final Dimension) (1994)
+    In the Line of Fire (1993)
+    Santa Clause, The (1994)
+```
+
+```
+Ridge Recommendations:
+    Dunston Checks In (1996)
+    Sudden Death (1995)
+    Don't Be a Menace to South Central While Drinking Your Juice in the Hood (1996)
+    Dead Presidents (1995)
+    Balto (1995)
+```
+
+```
+NN Recommendations:
+```
+
+```
+SVM Recommendations:
+    Savage Nights (Nuits fauves, Les) (1992)
+    It Takes Two (1995)
+    Secret Garden, The (1993)
+    Hoop Dreams (1994)
+    The Glass Shield (1994)
+```
 
 ## 📌 Notes
 
