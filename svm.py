@@ -4,6 +4,10 @@ from sklearn import svm
 import pandas as pd
 import numpy as np
 import util
+import pickle
+import matplotlib.pyplot as plt  # Add this import for plotting
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+from sklearn.metrics import precision_recall_curve, auc
 
 class MovieSVM():
 
@@ -130,12 +134,58 @@ class MovieSVM():
         A[A >= thresh] = 2*thresh
         A[A < thresh] = 0
         return A
+    
+# ---------------------------------------------------- #
+# Save Histogram of Predicted Ratings for All Users
+# ---------------------------------------------------- #
+def save_predicted_ratings_histogram(predicted_ratings: np.ndarray, filename: str = "predictions_svm.png"):
+    """
+    Saves a histogram of predicted ratings for all users.
+    """
+    plt.figure(figsize=(10, 6))
+    plt.hist(predicted_ratings.flatten(), bins=20, color='skyblue', edgecolor='black')
+    plt.title("Histogram of Predicted Ratings (SVM)")
+    plt.xlabel("Predicted Rating")
+    plt.ylabel("Frequency")
+    plt.grid(axis='y', alpha=0.75)
+    plt.savefig(filename)
+    print(f"Histogram saved as {filename}")
+    plt.close()
+
+def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, class_names: list, filename: str = "svm_confusion_matrix.png"):
+    """
+    Plots and saves the confusion matrix for SVM predictions.
+    """
+    cm = confusion_matrix(y_true, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    disp.plot(cmap='Blues')
+    plt.title("Confusion Matrix for SVM")
+    plt.savefig(filename)
+    print(f"Confusion Matrix saved as {filename}")
+    plt.close()
+
+def plot_precision_recall_curve(y_true: np.ndarray, y_scores: np.ndarray, filename: str = "svm_precision_recall.png"):
+    """
+    Plots and saves the precision-recall curve for SVM predictions.
+    """
+    precision, recall, _ = precision_recall_curve(y_true, y_scores)
+    pr_auc = auc(recall, precision)
+    plt.figure(figsize=(10, 6))
+    plt.plot(recall, precision, marker='.', label=f'AUC = {pr_auc:.2f}')
+    plt.title("Precision-Recall Curve for SVM")
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.legend()
+    plt.grid()
+    plt.savefig(filename)
+    print(f"Precision-Recall Curve saved as {filename}")
+    plt.close()
 
 if __name__== "__main__":
     NUM_MOVIES = 1000
     Data = util.load_data_matrix()
     A = Data[:400, :NUM_MOVIES]
-    movieSVM = MovieSVM(3.5, .01)
+    movieSVM = MovieSVM(1.5, .01) # sets threshold and delta. respectively
     V = Data[401:, :NUM_MOVIES]
     v_non_zero = np.count_nonzero(V)
     for i in range(len(A[0]) - 1, 0, -1):
@@ -143,8 +193,58 @@ if __name__== "__main__":
             A = np.delete(A, i, axis=1)
             V = np.delete(V, i, axis=1)
     
+    # Ensure consistent dimensions for training and validation
+    assert A.shape[1] == V.shape[1], "Training and validation matrices must have the same number of columns."
+
     accuracy, train_accuracy = movieSVM.fit(A, V)
     print("\n\n sparsity:", 1 - (v_non_zero*1.0)/(V.shape[0] * V.shape[1] * 1.0))
     print("\n\nFinished Accuracy Values:", accuracy)
     print("\n\nTraining Accuracy:", train_accuracy)
 
+    # ---------------------------------------------------- #
+    # Save Histogram of Predicted Ratings for All Users
+    # ---------------------------------------------------- #
+    save_predicted_ratings_histogram(A)
+
+    # ---------------------------------------------------- #
+    # Recommend Top Movies for User 1
+    # ---------------------------------------------------- #
+    user_id = 1  # Specify the user ID
+    predicted_ratings = A[user_id]  # Get predicted ratings for user 1
+    top_movie_indices = np.argsort(predicted_ratings)[-5:][::-1]  # Top 5 movies
+
+    # Load movie dictionary
+    movie_dict = pickle.load(open('data/data_dicts.p', 'rb'))
+
+    print(f"\nTop 5 movie recommendations for User {user_id}:")
+    for movie_idx in top_movie_indices:
+        for movie_id, movie_col in movie_dict['movieId_movieCol'].items():
+            if movie_col == movie_idx:
+                movie_title = movie_dict['movieId_movieName'][movie_id]
+                predicted_rating = predicted_ratings[movie_idx]
+                print(f"{movie_title:80} Predicted Rating: {predicted_rating:.2f}")
+
+    # ---------------------------------------------------- #
+    # Plot Confusion Matrix
+    # ---------------------------------------------------- #
+    class_names = ["Below Threshold", "Above Threshold"]
+
+    # Filter out invalid entries from y_true
+    y_true = V.flatten()
+    y_true = y_true[y_true != -1]  # Remove invalid entries
+
+    # Ensure y_pred matches the length of y_true
+    y_pred = A.flatten()
+    y_pred = y_pred[:len(y_true)]  # Match the length of y_true
+
+    # Convert continuous predictions to binary categories
+    y_pred_binary = np.where(y_pred >= 0.5, 1, 0)  # Threshold at 0.5
+
+    # Plot the confusion matrix
+    plot_confusion_matrix(y_true, y_pred_binary, class_names)
+
+    # ---------------------------------------------------- #
+    # Plot Precision-Recall Curve
+    # ---------------------------------------------------- #
+    y_scores = A.flatten()  # Use predicted ratings as scores
+    plot_precision_recall_curve(y_true, y_scores)
