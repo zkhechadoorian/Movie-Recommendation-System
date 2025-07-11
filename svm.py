@@ -8,6 +8,7 @@ import pickle
 import matplotlib.pyplot as plt  # Add this import for plotting
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from sklearn.metrics import precision_recall_curve, auc
+from sklearn.model_selection import GridSearchCV
 
 class MovieSVM():
 
@@ -54,7 +55,7 @@ class MovieSVM():
         totalValidation = np.count_nonzero(V!=-1)
         iteration = 0
             
-        svms = [ svm.SVC() for i in range(len(A[0]))  ]
+        svms = [svm.SVC(kernel='rbf', class_weight='balanced') for i in range(len(A[0]))]
         #print(len(svms))
         self.accuracy = []
         acc_prev, acc_k = 0, 2*self.e
@@ -143,7 +144,7 @@ def save_predicted_ratings_histogram(predicted_ratings: np.ndarray, filename: st
     Saves a histogram of predicted ratings for all users.
     """
     plt.figure(figsize=(10, 6))
-    plt.hist(predicted_ratings.flatten(), bins=20, color='skyblue', edgecolor='black')
+    plt.hist(predicted_ratings.flatten(), bins=np.arange(0,6,1.0), color='skyblue', edgecolor='black')
     plt.title("Histogram of Predicted Ratings (SVM)")
     plt.xlabel("Predicted Rating")
     plt.ylabel("Frequency")
@@ -171,7 +172,7 @@ if __name__== "__main__":
     NUM_MOVIES = 1000
     Data = util.load_data_matrix()
     A = Data[:400, :NUM_MOVIES]
-    movieSVM = MovieSVM(1.5, .01) # sets threshold and delta. respectively
+    movieSVM = MovieSVM(3.5, .01) # sets threshold and delta. respectively
     V = Data[401:, :NUM_MOVIES]
     v_non_zero = np.count_nonzero(V)
     for i in range(len(A[0]) - 1, 0, -1):

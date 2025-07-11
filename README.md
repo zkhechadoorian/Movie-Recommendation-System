@@ -188,13 +188,9 @@ Feel free to adapt file parameters and code structures to fine-tune model perfor
 #### Ridge Regression - Predicted Ratings:
 ![](./predictions_ridge.png)
 
-#### SVM - Predicted Raings:
+#### SVM - Predicted Ratings:
 ![](./predictions_svm.png)
 
-2. **Top Movie Recommendations Bar Chart**:
-   - Create a bar chart showing predicted ratings for the top 5 recommended movies for a specific user.
+#### SVM - Confusion Matrix:
+![](./predictions_svm.png)
 
-3. **SVM Confusion Matrix**:
-   - Visualize classification performance using a confusion matrix.
-
-Let me know if you need help generating these figures or further refining the README!
