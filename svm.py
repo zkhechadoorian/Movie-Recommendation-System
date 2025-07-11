@@ -158,27 +158,13 @@ def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, class_names: l
     """
     cm = confusion_matrix(y_true, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
-    disp.plot(cmap='Blues')
+    
+    plt.figure(figsize=(10, 8))  # Adjust the width and height as needed
+
+    disp.plot(cmap='Blues', ax=plt.gca())
     plt.title("Confusion Matrix for SVM")
     plt.savefig(filename)
     print(f"Confusion Matrix saved as {filename}")
-    plt.close()
-
-def plot_precision_recall_curve(y_true: np.ndarray, y_scores: np.ndarray, filename: str = "svm_precision_recall.png"):
-    """
-    Plots and saves the precision-recall curve for SVM predictions.
-    """
-    precision, recall, _ = precision_recall_curve(y_true, y_scores)
-    pr_auc = auc(recall, precision)
-    plt.figure(figsize=(10, 6))
-    plt.plot(recall, precision, marker='.', label=f'AUC = {pr_auc:.2f}')
-    plt.title("Precision-Recall Curve for SVM")
-    plt.xlabel("Recall")
-    plt.ylabel("Precision")
-    plt.legend()
-    plt.grid()
-    plt.savefig(filename)
-    print(f"Precision-Recall Curve saved as {filename}")
     plt.close()
 
 if __name__== "__main__":
@@ -242,9 +228,3 @@ if __name__== "__main__":
 
     # Plot the confusion matrix
     plot_confusion_matrix(y_true, y_pred_binary, class_names)
-
-    # ---------------------------------------------------- #
-    # Plot Precision-Recall Curve
-    # ---------------------------------------------------- #
-    y_scores = A.flatten()  # Use predicted ratings as scores
-    plot_precision_recall_curve(y_true, y_scores)
